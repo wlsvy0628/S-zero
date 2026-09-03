@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S-ZERO | Integrated Shooting Analysis</title>
+<style>
+:root{
+  --bg:#05090d; --panel:#0b161f; --panel2:#0e1d27; --line:#1b3948;
+  --cyan:#3bd4ff; --green:#55e49c; --amber:#ffd36c; --red:#ff747a;
+  --text:#eaf8fe; --muted:#7695a5; --soft:#a1bbc7;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR","Apple SD Gothic Neo",Arial,sans-serif}
+body{
+  background:
+    radial-gradient(circle at 50% -20%,rgba(31,116,151,.24),transparent 42%),
+    linear-gradient(180deg,#03070a,#07111a 54%,#04080b);
+}
+body:before{
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:.07;
+  background-image:
+    linear-gradient(rgba(59,212,255,.12) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(59,212,255,.12) 1px,transparent 1px);
+  background-size:42px 42px;
+}
+button{font:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.packet,.tool,.btn,#targetSvg{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.packet,.tool,.btn{user-select:none;-webkit-user-select:none}
+.app{width:min(1540px,calc(100% - 24px));margin:12px auto 24px}
+.top{
+  min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:12px 17px;border:1px solid var(--line);background:rgba(7,16,23,.94);
+  box-shadow:0 20px 50px rgba(0,0,0,.27);position:relative
+}
+.top:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cyan)}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{
+  width:58px;height:44px;border:1px solid #2c6982;background:
+  linear-gradient(135deg,#0c2633,#07131b);display:flex;align-items:center;
+  justify-content:center;gap:3px;color:var(--cyan);font-weight:900;
+  box-shadow:inset 0 0 18px rgba(59,212,255,.06)
+}
+.logo span{font-size:22px;line-height:1}.logo i{font-style:normal;font-size:7px;letter-spacing:.12em;color:#dff8ff;
+  writing-mode:vertical-rl;transform:rotate(180deg)}
+.brand h1{margin:0;font-size:19px;letter-spacing:.08em}
+.brand h1 span{color:var(--cyan)}
+.brand p{margin:4px 0 0;font-size:10px;color:var(--muted)}
+.badges{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.badge{border:1px solid #244655;background:#08151d;padding:6px 9px;border-radius:999px;
+  font-size:8px;color:#84a5b4}
+.badge.on{color:var(--green);border-color:#28553f}
+
+.layout{display:grid;grid-template-columns:330px minmax(620px,1fr) 400px;gap:12px;margin-top:12px}
+.card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(13,27,38,.98),rgba(7,15,22,.99));
+  box-shadow:0 18px 48px rgba(0,0,0,.24);position:relative;overflow:hidden}
+.card:before{content:"";position:absolute;top:0;left:0;width:45%;height:1px;background:linear-gradient(90deg,var(--cyan),transparent)}
+.head{height:44px;padding:0 13px;border-bottom:1px solid #17313e;display:flex;align-items:center;justify-content:space-between}
+.head b{font-size:11px;letter-spacing:.08em}
+.head small{font-size:8px;color:#628293}
+.body{padding:13px}
+.help{font-size:10px;color:#a0b8c4;line-height:1.6;border-left:2px solid var(--cyan);padding-left:9px;margin-bottom:13px}
+.lab{font-size:8px;color:#678a9c;letter-spacing:.14em;margin:4px 0 8px}
+
+.packet{
+  border:1px solid #213f4e;background:#08151d;border-radius:4px;padding:10px;margin-bottom:8px;
+  cursor:pointer;transition:.14s;user-select:none
+}
+.packet:hover{border-color:#367084}
+.packet.active{border-color:var(--cyan);background:#09202b;box-shadow:inset 0 0 18px rgba(59,212,255,.05)}
+.packet-top{display:flex;justify-content:space-between;align-items:center}
+.packet b{font-size:10px}
+.packet span{font-size:8px;color:#668898}
+.packet.active span{color:var(--cyan)}
+.packet svg{width:100%;height:36px;margin-top:7px;background:#061119;border:1px solid #173441;display:block}
+.packet-note{font-size:8px;color:#627f8e;line-height:1.45;margin:3px 0 12px}
+.btn{width:100%;height:44px;border:1px solid #2c7995;background:#0d526c;color:white;font-weight:800;
+  font-size:10px;letter-spacing:.05em;cursor:pointer;margin-top:7px;border-radius:3px}
+.btn.secondary{background:#0a1922;border-color:#2a4b5a;color:#bad0da}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.mode-info{border:1px solid #293e48;background:#081218;padding:9px;margin-top:10px;font-size:8px;color:#698694;line-height:1.55}
+
+.target-area{position:relative;min-height:650px;background:radial-gradient(circle at center,rgba(30,78,95,.14),transparent 46%),#061019;
+  display:flex;align-items:center;justify-content:center;padding:38px 22px 74px}
+#targetSvg{width:min(95%,760px);height:auto;display:block;cursor:crosshair;filter:drop-shadow(0 22px 36px rgba(0,0,0,.32))}
+.hud{position:absolute;left:14px;top:12px;font-size:8px;line-height:1.55;color:#668a9a}
+.hud b{color:var(--green)}
+.count{position:absolute;right:14px;top:12px;border:1px solid #23495a;background:#06131a;padding:8px 10px;font-size:8px;color:#7698a7}
+.count strong{font-size:17px;color:white;margin-left:5px}
+.tools{position:absolute;left:50%;bottom:13px;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:96%}
+.tool{border:1px solid #285064;background:#091a23;color:#a5c0cb;padding:7px 9px;font-size:8px;cursor:pointer;border-radius:3px}
+.tool:hover{border-color:var(--cyan);color:white}
+.target-message{position:absolute;top:56px;left:50%;transform:translateX(-50%);font-size:9px;color:#88a7b6;background:#07151d;border:1px solid #244654;padding:7px 10px;border-radius:3px;pointer-events:none}
+
+.processing{display:none;position:absolute;inset:0;background:rgba(3,9,13,.78);backdrop-filter:blur(3px);align-items:center;justify-content:center;z-index:5}
+.processing.show{display:flex}
+.spinner{width:50px;height:50px;border-radius:50%;border:2px solid #173d4e;border-top-color:var(--cyan);
+  animation:spin .75s linear infinite;margin:auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.proc{text-align:center}.proc b{display:block;font-size:11px;margin-top:11px}.proc span{display:block;font-size:8px;color:#7597a6;margin-top:4px}
+
+.top-result{display:grid;grid-template-columns:102px 1fr;gap:12px;align-items:center}
+.score{width:98px;height:98px;border-radius:50%;display:grid;place-items:center;position:relative;
+  background:conic-gradient(var(--cyan) calc(var(--v)*1%),#16303c 0)}
+.score:before{content:"";position:absolute;inset:9px;border-radius:50%;background:#07131a;border:1px solid #183846}
+.score div{position:relative;text-align:center}.score strong{display:block;font-size:26px}.score span{font-size:7px;color:#688a9a}
+.kicker{font-size:8px;color:#668a9b;letter-spacing:.12em}
+.result h2{font-size:18px;margin:5px 0}
+.result p{font-size:9px;line-height:1.5;color:#7c9aa9;margin:0}
+.conf{margin-top:8px;font-size:8px;color:#8aa5b2}.conf b{color:var(--green)}
+.probs{margin-top:14px}
+.prow{display:grid;grid-template-columns:118px 1fr 34px;gap:7px;align-items:center;margin:8px 0;font-size:8px}
+.bar{height:7px;border:1px solid #204251;background:#0b202a;overflow:hidden}
+.fill{height:100%;background:linear-gradient(90deg,#177fa6,var(--cyan))}
+.prow strong{text-align:right}
+.box{border:1px solid #213e4b;background:#08151c;padding:10px;margin-top:12px}
+.box-title{font-size:8px;color:#668a9b;letter-spacing:.12em}
+.box p{font-size:9px;line-height:1.65;color:#c4d8e0;margin:7px 0 0}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+.stat{border:1px solid #203d4a;background:#08151c;padding:9px}
+.stat small{font-size:8px;color:#648697}
+.stat strong{display:block;font-size:12px;margin-top:4px}
+.good{color:var(--green)} .warn{color:var(--amber)} .bad{color:var(--red)}
+.compare{margin-top:12px;border-top:1px solid #17313e;padding-top:10px}
+.crow{display:grid;grid-template-columns:120px 1fr 38px;gap:7px;align-items:center;margin:7px 0;font-size:8px;color:#7898a6}
+.ctrack{height:5px;background:#102a36;overflow:hidden}.ctrack div{height:100%;background:#2aaed6}
+
+.bottom{display:grid;grid-template-columns:1.1fr .9fr 1fr;gap:12px;margin-top:12px}
+.log{height:110px;overflow:auto;font:8px ui-monospace,Consolas,monospace;line-height:1.7;color:#7193a3}
+.log .ok{color:var(--green)} .log .warn{color:var(--amber)}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.metric{border:1px solid #203d4a;background:#08151c;padding:10px;text-align:center}
+.metric strong{display:block;font-size:15px}.metric span{display:block;font-size:7px;color:#648697;margin-top:4px}
+.flow{height:110px;display:flex;align-items:center;justify-content:center;gap:6px}
+.node{border:1px solid #255064;background:#091a23;padding:9px;text-align:center;min-width:74px}
+.node b{font-size:8px}.node span{display:block;font-size:7px;color:#658898;margin-top:3px}
+.arrow{color:#3e7489}
+
+@media(max-width:1200px){
+  .layout{grid-template-columns:330px 1fr}.right{grid-column:1/-1}.bottom{grid-template-columns:1fr}
+}
+@media(max-width:800px){
+  .app{width:calc(100% - 12px)}.layout{grid-template-columns:1fr}.right{grid-column:auto}
+  .badges{display:none}.target-area{min-height:530px}
+}
+
+/* S-ZERO product console refinement */
+.top{border-color:#24566b;background:linear-gradient(90deg,rgba(7,20,28,.98),rgba(5,13,19,.96))}
+.top:after{content:"S-ZERO / FIRE CONTROL DATA SYSTEM";position:absolute;right:16px;bottom:5px;
+  font:6px ui-monospace,monospace;letter-spacing:.18em;color:#315968}
+.card{border-color:#193d4d}
+.card .head{background:linear-gradient(90deg,rgba(14,38,50,.6),transparent)}
+.head b{color:#e9f8fd}
+.packet{position:relative;overflow:hidden}
+.packet:before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:#1a4455}
+.packet.active:before{background:var(--cyan);box-shadow:0 0 10px rgba(59,212,255,.65)}
+.packet.active b{color:#f1fbff}
+.btn{box-shadow:inset 0 0 22px rgba(59,212,255,.035)}
+.btn:not(.secondary){background:linear-gradient(180deg,#116781,#0c4e66)}
+.target-area:after{content:"S-ZERO // S-VISION";position:absolute;right:16px;bottom:52px;
+  font:7px ui-monospace,monospace;letter-spacing:.16em;color:#294e5d;pointer-events:none}
+.score{box-shadow:0 0 32px rgba(59,212,255,.08)}
+@media(max-width:800px){
+  .top:after{display:none}
+  .brand h1{font-size:17px}
+  .brand p{font-size:8px;letter-spacing:.04em}
+  .logo{width:52px}
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <div class="brand">
+    <div class="logo"><span>S</span><i>ZERO</i></div>
+    <div><h1>S-ZERO <span>CONTROL SYSTEM</span></h1><p>INTEGRATED ZEROING · SHOOTING ANALYSIS · DATA FUSION</p></div>
+  </div>
+  <div class="badges">
+    <span class="badge on">● S-ENGINE READY</span>
+    <span class="badge on">● S-MODULE LINK</span>
+    <span class="badge on">● S-VISION LINK</span>
+  </div>
+</header>
+
+<section class="layout">
+
+  <div class="card left">
+    <div class="head"><b>01 / S-MODULE</b><small>SENSOR STREAM</small></div>
+    <div class="body">
+<div class="lab">SENSOR DATA CHANNEL</div>
+
+      <div class="packet active" data-packet="P1" role="button" tabindex="0">
+        <div class="packet-top"><b>S-Module Data 01</b><span>READY</span></div>
+        <svg viewBox="0 0 290 36" aria-hidden="true"><polyline fill="none" stroke="#2ab5dd" stroke-width="1.4"
+          points="0,18 12,16 24,19 36,17 48,20 60,16 72,18 84,17 96,19 108,16 120,18 132,20 144,17 156,18 168,16 180,19 192,18 204,17 216,19 228,16 240,18 252,17 264,19 276,18 290,17"/></svg>
+      </div>
+
+      <div class="packet" data-packet="P2" role="button" tabindex="0">
+        <div class="packet-top"><b>S-Module Data 02</b><span>READY</span></div>
+        <svg viewBox="0 0 290 36" aria-hidden="true"><polyline fill="none" stroke="#2ab5dd" stroke-width="1.4"
+          points="0,18 12,9 24,26 36,12 48,29 60,7 72,24 84,10 96,27 108,13 120,30 132,8 144,25 156,11 168,28 180,9 192,24 204,13 216,27 228,8 240,29 252,12 264,26 276,10 290,22"/></svg>
+      </div>
+
+      <div class="packet" data-packet="P3" role="button" tabindex="0">
+        <div class="packet-top"><b>S-Module Data 03</b><span>READY</span></div>
+        <svg viewBox="0 0 290 36" aria-hidden="true"><polyline fill="none" stroke="#2ab5dd" stroke-width="1.4"
+          points="0,18 10,17 20,19 30,16 40,29 50,7 60,25 70,10 80,28 90,8 100,24 110,12 120,30 130,6 140,26 150,11 160,29 170,7 180,25 190,12 200,28 210,9 220,24 230,15 240,27 250,10 260,26 270,14 280,23 290,18"/></svg>
+      </div>
+
+      <div class="packet" data-packet="P4" role="button" tabindex="0">
+        <div class="packet-top"><b>S-Module Data 04</b><span>READY</span></div>
+        <svg viewBox="0 0 290 36" aria-hidden="true"><polyline fill="none" stroke="#2ab5dd" stroke-width="1.4"
+          points="0,18 12,14 24,22 36,11 48,24 60,15 72,20 84,9 96,26 108,13 120,22 132,10 144,25 156,16 168,21 180,12 192,24 204,14 216,23 228,11 240,25 252,15 264,20 276,13 290,19"/></svg>
+      </div>
+<button type="button" id="impactOnlyBtn" class="btn secondary">S-VISION 분석</button>
+      <button type="button" id="fullAnalyzeBtn" class="btn">S-ENGINE 융합 분석</button>
+</div>
+  </div>
+
+  <div class="card center">
+    <div class="head"><b>02 / S-VISION</b><small>TARGET ACQUISITION</small></div>
+    <div class="target-area">
+      <div class="hud">S-VISION<br><b>TARGET ACQUISITION</b></div>
+      <div class="count">IMPACT <strong id="impactCount">0</strong></div>
+<svg id="targetSvg" viewBox="0 0 820 680" aria-label="S-Zero demo paper target">
+        <rect x="0" y="0" width="820" height="680" fill="#071119"/>
+        <rect id="paperRect" x="175" y="80" width="470" height="520" rx="2" fill="#f2f0e8" stroke="#b9b7af" stroke-width="2"/>
+        <g id="rings" fill="none" stroke="#343434" stroke-width="1.5">
+          <circle cx="410" cy="340" r="42"/>
+          <circle cx="410" cy="340" r="78"/>
+          <circle cx="410" cy="340" r="114"/>
+          <circle cx="410" cy="340" r="150"/>
+          <circle cx="410" cy="340" r="186"/>
+        </g>
+        <line x1="205" y1="340" x2="615" y2="340" stroke="#777" stroke-width="1"/>
+        <line x1="410" y1="135" x2="410" y2="545" stroke="#777" stroke-width="1"/>
+        <circle cx="410" cy="340" r="42" fill="#111"/>
+        <text x="410" y="346" text-anchor="middle" fill="#fff" font-size="15" font-family="Arial">10</text>
+        <text x="410" y="294" text-anchor="middle" fill="#444" font-size="11" font-family="Arial">9</text>
+        <text x="410" y="258" text-anchor="middle" fill="#444" font-size="11" font-family="Arial">8</text>
+        <text x="410" y="222" text-anchor="middle" fill="#444" font-size="11" font-family="Arial">7</text>
+        <g id="impactLayer"></g>
+        <g id="centerLayer"></g>
+      </svg>
+
+      <div class="tools">
+        <button type="button" id="presetCenterBtn" class="tool">중앙 군집</button>
+        <button type="button" id="presetBiasBtn" class="tool">한쪽 편향</button>
+        <button type="button" id="presetScatterBtn" class="tool">넓은 분산</button>
+        <button type="button" id="undoBtn" class="tool">↶ 마지막 삭제</button>
+        <button type="button" id="clearBtn" class="tool">초기화</button>
+      </div>
+
+      <div id="processing" class="processing">
+        <div class="proc"><div class="spinner"></div><b id="procTitle">분석 중</b><span id="procSub">특징 추출</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card right">
+    <div class="head"><b>03 / S-ENGINE</b><small>AI ANALYSIS</small></div>
+    <div class="body">
+      <div class="top-result">
+        <div id="scoreRing" class="score" style="--v:0"><div><strong id="stabilityScore">--</strong><span>DATA STABILITY</span></div></div>
+        <div class="result">
+          <div class="kicker">S-ZERO INTERPRETATION</div>
+          <h2 id="primaryResult">분석 대기</h2>
+          <p id="resultSummary">탄착점을 입력하고 분석 모드를 선택하세요.</p>
+          <div class="conf">MODEL CONFIDENCE <b id="confidenceText">--</b></div>
+        </div>
+      </div>
+
+      <div id="probabilityRows" class="probs"></div>
+
+      <div class="stats">
+        <div class="stat"><small>탄착군 분산</small><strong id="spreadStat">--</strong></div>
+        <div class="stat"><small>중심 편차</small><strong id="offsetStat">--</strong></div>
+        <div class="stat"><small>방향성</small><strong id="directionStat">--</strong></div>
+        <div class="stat"><small>분석 모드</small><strong id="modeStat">--</strong></div>
+      </div>
+
+      <div class="box">
+        <div class="box-title">ANALYSIS BASIS</div>
+        <p id="whyText">판단 근거가 여기에 표시됩니다.</p>
+      </div>
+
+      <div class="compare">
+        <div class="lab">FUSED DATA VECTOR</div>
+        <div id="featureRows"></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<section class="bottom">
+  <div class="card">
+    <div class="head"><b>S-ZERO SYSTEM LOG</b><small>LIVE</small></div>
+    <div class="body"><div id="systemLog" class="log"></div></div>
+  </div>
+  <div class="card">
+    <div class="head"><b>S-ENGINE CORE</b><small>MODEL STATUS</small></div>
+    <div class="body">
+      <div class="metric-grid">
+        <div class="metric"><strong id="modelAcc">--</strong><span>MODEL VALIDATION</span></div>
+        <div class="metric"><strong id="trainCount">--</strong><span>TRAIN DATA</span></div>
+        <div class="metric"><strong>9 → 5</strong><span>AI CLASSIFIER</span></div>
+        <div class="metric"><strong>LOCAL</strong><span>EDGE CORE</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="head"><b>S-ZERO DATA FLOW</b><small>DATA FUSION</small></div>
+    <div class="body">
+      <div class="flow">
+        <div class="node"><b>탄착 패턴</b><span>S-Vision</span></div>
+        <div class="arrow">+</div>
+        <div class="node"><b>동작·반동</b><span>S-Module</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>융합 분석</b><span>S-Engine AI</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+"use strict";
+
+const MODEL = {"features": ["impact_spread", "centroid_offset", "directionality", "sample_quality", "pre_shot_motion", "trigger_motion", "recoil_variation", "vibration_anomaly", "sensor_quality"], "classes": ["equipment_anomaly", "mixed", "shooter_factor", "stable", "systematic_offset"], "mean": [0.42054890852570037, 0.42134375371384525, 0.41346608922948325, 0.7733337530149789, 0.3984593454177232, 0.3724727329042539, 0.4198404610522656, 0.39559293687057295, 0.8323180754407579], "scale": [0.23192752870146266, 0.25406470820820204, 0.2631208751473976, 0.15658529727380627, 0.2545465035235796, 0.23897766328582185, 0.25763133496994595, 0.2737520307922077, 0.13974354194946614], "coef": [[-0.11289330621128738, -0.18743791890080239, -0.1868136386657809, 0.23486232134538135, -0.5867174331007813, -0.6969961219786767, 1.4656869374560737, 1.5713131306520531, -0.07351189017660671], [0.13978063440210245, 0.11617447549488759, 0.1434207043719999, -0.8925089299383554, 0.3219885453751186, 0.3934387607515687, 0.2081051212163096, 0.12503278549768787, -0.7105809093856462], [0.723650110781873, -0.27245278825456914, -0.41731949723885176, 0.16559033042996124, 1.2668510729819762, 1.0799414010468058, -0.5087964938644459, -0.5362936270595421, 0.3469763301441362], [-0.44516163362191086, -0.7090772092520018, -0.8215892511687262, 0.38297479523496025, -0.6096873164238981, -0.44155015354090976, -0.5618022564298697, -0.5441003950248617, 0.21059142605477715], [-0.30537580535077996, 1.0527934409124833, 1.282301682701365, 0.10908148292804706, -0.39243486883241246, -0.33483388627878596, -0.6031933083780693, -0.6159518940653392, 0.2265250433633431]], "intercept": [-0.4592569586714928, 1.2128417460514451, -0.17775934526492376, -0.2762267153578408, -0.2995987267571889], "synthetic_accuracy": 0.9311004784688995, "train_n": 7410, "test_n": 2090};
+
+const LABELS = {
+  stable: "정상 / 안정 패턴",
+  shooter_factor: "사수 영향 가능성",
+  systematic_offset: "체계적 편향 패턴",
+  equipment_anomaly: "장비 이상징후 가능성",
+  mixed: "복합 / 추가 데이터 필요"
+};
+
+const SUMMARIES = {
+  stable: "탄착과 센서 특징이 비교적 안정적인 범위에 가깝습니다.",
+  shooter_factor: "탄착 분산과 함께 사수 동작 관련 센서 특징이 상대적으로 강하게 나타났습니다.",
+  systematic_offset: "탄착군 중심이 반복적으로 한 방향에 형성되는 패턴이 강합니다.",
+  equipment_anomaly: "사수 동작보다 반동·진동 계열 이상 특징이 상대적으로 강하게 나타났습니다.",
+  mixed: "한 가지 원인으로 단정하기 어렵거나 데이터가 충분하지 않습니다."
+};
+
+const SENSOR_PACKETS = {
+  P1: {pre:0.18, trigger:0.17, recoil:0.18, vibration:0.16, quality:0.93},
+  P2: {pre:0.76, trigger:0.72, recoil:0.34, vibration:0.26, quality:0.89},
+  P3: {pre:0.29, trigger:0.25, recoil:0.80, vibration:0.83, quality:0.80},
+  P4: {pre:0.51, trigger:0.47, recoil:0.53, vibration:0.49, quality:0.70}
+};
+
+const FEATURE_NAMES = [
+  "탄착군 분산","중심 편차","방향성","표본 신뢰도",
+  "격발 전 동작","격발 순간 변동","반동 변동","진동 이상","센서 품질"
+];
+
+let selectedPacket = "P1";
+let impactPoints = [];
+let busy = false;
+
+const svg = document.getElementById("targetSvg");
+const impactLayer = document.getElementById("impactLayer");
+const centerLayer = document.getElementById("centerLayer");
+
+// Unified activation helper for mouse, touch and pen.
+// Pointer events are preferred; click is retained as a keyboard/fallback path.
+function bindActivate(element, handler){
+  if(!element) return;
+  let lastPointerTime = 0;
+
+  element.addEventListener("pointerup", function(event){
+    if(event.pointerType === "mouse" && event.button !== 0) return;
+    lastPointerTime = Date.now();
+    event.preventDefault();
+    handler(event);
+  }, {passive:false});
+
+  element.addEventListener("click", function(event){
+    // Avoid duplicate execution immediately after pointerup.
+    if(Date.now() - lastPointerTime < 500) return;
+    handler(event);
+  });
+
+  element.addEventListener("keydown", function(event){
+    if(event.key === "Enter" || event.key === " "){
+      event.preventDefault();
+      handler(event);
+    }
+  });
+}
+
+function byId(id){ return document.getElementById(id); }
+function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+
+function log(message, cls){
+  const row = document.createElement("div");
+  if(cls) row.className = cls;
+  row.textContent = "[" + new Date().toLocaleTimeString() + "] " + message;
+  byId("systemLog").appendChild(row);
+  byId("systemLog").scrollTop = byId("systemLog").scrollHeight;
+}
+
+function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+
+function softmax(values){
+  const maxValue = Math.max.apply(null, values);
+  const exps = values.map(v => Math.exp(v - maxValue));
+  const sum = exps.reduce((a,b) => a+b, 0);
+  return exps.map(v => v / sum);
+}
+
+function infer(raw){
+  const standardized = raw.map((v,i) => (v - MODEL.mean[i]) / MODEL.scale[i]);
+  const logits = MODEL.coef.map((row, classIndex) => {
+    let z = MODEL.intercept[classIndex];
+    for(let i=0;i<standardized.length;i++) z += standardized[i] * row[i];
+    return z;
+  });
+  return softmax(logits);
+}
+
+function renderImpacts(){
+  impactLayer.innerHTML = "";
+  centerLayer.innerHTML = "";
+
+  impactPoints.forEach((p, index) => {
+    const group = document.createElementNS("http://www.w3.org/2000/svg","g");
+
+    const outer = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    outer.setAttribute("cx", p.x); outer.setAttribute("cy", p.y); outer.setAttribute("r", "11");
+    outer.setAttribute("fill", "none"); outer.setAttribute("stroke", "#23bde8"); outer.setAttribute("stroke-width", "2");
+
+    const hole = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    hole.setAttribute("cx", p.x); hole.setAttribute("cy", p.y); hole.setAttribute("r", "6");
+    hole.setAttribute("fill", "#121212");
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+    label.setAttribute("x", p.x + 13); label.setAttribute("y", p.y - 9);
+    label.setAttribute("fill", "#0c7898"); label.setAttribute("font-size", "10");
+    label.setAttribute("font-family", "monospace"); label.textContent = String(index + 1);
+
+    group.appendChild(outer); group.appendChild(hole); group.appendChild(label);
+    impactLayer.appendChild(group);
+  });
+
+  if(impactPoints.length >= 2){
+    const mx = impactPoints.reduce((s,p)=>s+p.x,0) / impactPoints.length;
+    const my = impactPoints.reduce((s,p)=>s+p.y,0) / impactPoints.length;
+
+    const ring = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    ring.setAttribute("cx", mx); ring.setAttribute("cy", my); ring.setAttribute("r", "14");
+    ring.setAttribute("fill", "none"); ring.setAttribute("stroke", "#1da76b"); ring.setAttribute("stroke-width", "2");
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+    label.setAttribute("x", mx + 18); label.setAttribute("y", my - 10);
+    label.setAttribute("fill", "#146f48"); label.setAttribute("font-size", "10");
+    label.setAttribute("font-family", "monospace"); label.textContent = "GROUP CENTER";
+
+    centerLayer.appendChild(ring); centerLayer.appendChild(label);
+  }
+
+  byId("impactCount").textContent = String(impactPoints.length);
+}
+
+function eventToSvgPoint(event){
+  let clientX = event.clientX;
+  let clientY = event.clientY;
+
+  // Fallback for legacy touch events if a browser wraps them.
+  if((clientX === undefined || clientY === undefined) && event.changedTouches && event.changedTouches.length){
+    clientX = event.changedTouches[0].clientX;
+    clientY = event.changedTouches[0].clientY;
+  }
+  if(clientX === undefined || clientY === undefined) return null;
+
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  const matrix = svg.getScreenCTM();
+  if(!matrix) return null;
+  return pt.matrixTransform(matrix.inverse());
+}
+
+function addImpactFromEvent(event){
+  const p = eventToSvgPoint(event);
+  if(!p) return;
+  const insidePaper = p.x >= 175 && p.x <= 645 && p.y >= 80 && p.y <= 600;
+  if(!insidePaper) return;
+
+  impactPoints.push({x:p.x, y:p.y});
+  renderImpacts();
+  log("탄착점 " + impactPoints.length + " 입력");
+}
+
+bindActivate(svg, addImpactFromEvent);
+
+function setPreset(kind){
+  const cx = 410, cy = 340;
+  if(kind === "center"){
+    impactPoints = [
+      {x:cx-20,y:cy+8},{x:cx+14,y:cy-15},{x:cx+24,y:cy+13},
+      {x:cx-8,y:cy-22},{x:cx+5,y:cy+20}
+    ];
+  }else if(kind === "bias"){
+    impactPoints = [
+      {x:cx+96,y:cy-54},{x:cx+112,y:cy-38},{x:cx+86,y:cy-63},
+      {x:cx+105,y:cy-72},{x:cx+120,y:cy-50}
+    ];
+  }else{
+    impactPoints = [
+      {x:cx-90,y:cy+70},{x:cx+78,y:cy-82},{x:cx+104,y:cy+54},
+      {x:cx-75,y:cy-95},{x:cx+18,y:cy+112}
+    ];
+  }
+  renderImpacts();
+  log("탄착 예시 적용: " + kind, "ok");
+}
+
+bindActivate(byId("presetCenterBtn"), ()=>setPreset("center"));
+bindActivate(byId("presetBiasBtn"), ()=>setPreset("bias"));
+bindActivate(byId("presetScatterBtn"), ()=>setPreset("scatter"));
+
+bindActivate(byId("undoBtn"), function(){
+  if(impactPoints.length > 0){
+    impactPoints.pop();
+    renderImpacts();
+    log("마지막 탄착점 삭제");
+  }
+});
+
+bindActivate(byId("clearBtn"), function(){
+  impactPoints = [];
+  renderImpacts();
+  clearResult();
+  log("표적 및 결과 초기화");
+});
+
+function selectPacket(packetId){
+  selectedPacket = packetId;
+  document.querySelectorAll(".packet").forEach(el => {
+    el.classList.toggle("active", el.dataset.packet === packetId);
+  });
+  log("S-Module 센서 패킷 " + packetId + " 선택", "ok");
+}
+
+document.querySelectorAll(".packet").forEach(el => {
+  bindActivate(el, ()=>selectPacket(el.dataset.packet));
+});
+
+function impactMetrics(){
+  const cx = 410, cy = 340, radius = 230;
+
+  if(impactPoints.length === 0){
+    return {spread:0.50, offset:0.50, direction:0.50, sampleQuality:0.05};
+  }
+
+  const mx = impactPoints.reduce((s,p)=>s+p.x,0) / impactPoints.length;
+  const my = impactPoints.reduce((s,p)=>s+p.y,0) / impactPoints.length;
+
+  const distances = impactPoints.map(p => Math.hypot(p.x-mx, p.y-my));
+  const avgDistance = distances.reduce((a,b)=>a+b,0) / distances.length;
+
+  const spread = clamp01(avgDistance / 105);
+  const offset = clamp01(Math.hypot(mx-cx, my-cy) / radius);
+
+  // A compact cluster away from the center is a stronger systematic direction pattern.
+  const direction = clamp01(offset * 0.82 + (1-spread) * 0.26);
+
+  // Confidence in target statistics increases with point count.
+  const sampleQuality = clamp01(impactPoints.length / 5);
+
+  return {spread, offset, direction, sampleQuality};
+}
+
+function fusedVector(){
+  const t = impactMetrics();
+  const s = SENSOR_PACKETS[selectedPacket];
+  return [
+    t.spread, t.offset, t.direction, t.sampleQuality,
+    s.pre, s.trigger, s.recoil, s.vibration, s.quality
+  ];
+}
+
+function level(v){
+  if(v < 0.33) return ["낮음","good"];
+  if(v < 0.66) return ["보통","warn"];
+  return ["높음","bad"];
+}
+
+function renderFeatureRows(vector){
+  byId("featureRows").innerHTML = FEATURE_NAMES.map((name,i)=>{
+    const pct = Math.round(clamp01(vector[i]) * 100);
+    return '<div class="crow"><span>'+name+'</span><div class="ctrack"><div style="width:'+pct+'%"></div></div><b>'+pct+'</b></div>';
+  }).join("");
+}
+
+function renderImpactStats(metrics, modeText, modeClass){
+  const a = level(metrics.spread), b = level(metrics.offset), c = level(metrics.direction);
+
+  byId("spreadStat").textContent = a[0];
+  byId("spreadStat").className = a[1];
+
+  byId("offsetStat").textContent = b[0];
+  byId("offsetStat").className = b[1];
+
+  byId("directionStat").textContent = c[0];
+  byId("directionStat").className = c[1];
+
+  byId("modeStat").textContent = modeText;
+  byId("modeStat").className = modeClass;
+}
+
+function clearResult(){
+  byId("stabilityScore").textContent = "--";
+  byId("scoreRing").style.setProperty("--v", 0);
+  byId("primaryResult").textContent = "분석 대기";
+  byId("resultSummary").textContent = "탄착점을 입력하고 분석 모드를 선택하세요.";
+  byId("confidenceText").textContent = "--";
+  byId("probabilityRows").innerHTML = "";
+  byId("spreadStat").textContent = "--";
+  byId("offsetStat").textContent = "--";
+  byId("directionStat").textContent = "--";
+  byId("modeStat").textContent = "--";
+  byId("whyText").textContent = "판단 근거가 여기에 표시됩니다.";
+  byId("featureRows").innerHTML = "";
+}
+
+function impactOnlyAnalysis(){
+  const m = impactMetrics();
+  const stability = Math.round(clamp01((1-m.spread)*0.55 + (1-m.offset)*0.25 + (1-m.direction)*0.20) * 100);
+
+  byId("stabilityScore").textContent = String(stability);
+  byId("scoreRing").style.setProperty("--v", stability);
+  byId("primaryResult").textContent = impactPoints.length < 2 ? "추가 탄착 필요" : "원인 구분 불가";
+  byId("resultSummary").textContent =
+    impactPoints.length < 2
+      ? "탄착 패턴을 계산하려면 최소 2개 이상의 탄착점이 필요합니다."
+      : "S-Vision만으로는 탄착 패턴은 볼 수 있지만 사수 문제인지 장비 문제인지는 신뢰성 있게 구분하기 어렵습니다.";
+  byId("confidenceText").textContent = "N/A";
+  byId("probabilityRows").innerHTML = "";
+  renderImpactStats(m, "탄착 전용", "warn");
+
+  byId("whyText").textContent =
+    impactPoints.length < 2
+      ? "현재 입력된 탄착점 수가 부족합니다. 여러 탄착점의 군집과 중심을 비교해야 분산·편향을 의미 있게 계산할 수 있습니다."
+      : "S-Vision은 분산, 중심 편차, 방향성을 계산합니다. 그러나 비슷한 탄착 패턴은 사수 동작, 체계적 편향, 장비 이상 등 여러 원인에서 나타날 수 있으므로 S-Module 데이터가 추가로 필요합니다.";
+
+  const zeroSensor = [m.spread,m.offset,m.direction,m.sampleQuality,0,0,0,0,0];
+  renderFeatureRows(zeroSensor);
+  log("탄착 전용 분석 완료", "ok");
+}
+
+function explanationFor(cls, vector){
+  if(cls === "shooter_factor"){
+    return "탄착 패턴과 함께 S-Module 패킷에서 격발 전 동작·격발 순간 변동이 상대적으로 크게 나타나 장비 이상보다 사수 영향 가능성을 높게 분류했습니다.";
+  }
+  if(cls === "equipment_anomaly"){
+    return "사수 동작 관련 특징보다 반동·진동 계열 특징이 크게 나타나 장비 이상징후 가능성을 우선 표시했습니다.";
+  }
+  if(cls === "systematic_offset"){
+    return "탄착군 중심 편차와 방향성이 뚜렷하고 센서 동작·반동 특징은 상대적으로 안정적이어서 체계적 편향 패턴으로 분류했습니다.";
+  }
+  if(cls === "stable"){
+    return "탄착군과 센서 패킷 모두에서 큰 이상 특징이 나타나지 않아 안정 패턴으로 분류했습니다.";
+  }
+  return "탄착과 센서 특징이 서로 섞여 있어 한 가지 원인으로 단정하기 어렵습니다. 추가 데이터 또는 반복 측정이 필요합니다.";
+}
+
+function fullAnalysis(){
+  const vector = fusedVector();
+  const probabilities = infer(vector);
+  let bestIndex = 0;
+  for(let i=1;i<probabilities.length;i++){
+    if(probabilities[i] > probabilities[bestIndex]) bestIndex = i;
+  }
+
+  let cls = MODEL.classes[bestIndex];
+  let confidence = probabilities[bestIndex];
+  let decisionGuard = "";
+
+  if(impactPoints.length < 2){
+    cls = "mixed";
+    decisionGuard = "insufficient_points";
+  }else{
+    const sensorEvidence = Math.max(vector[4], vector[5], vector[6], vector[7]);
+
+    // Safety/quality guard:
+    // A widely dispersed group with otherwise calm sensor data should not be called "stable".
+    // The available evidence is contradictory, so the demonstrator requests more data.
+    if(vector[0] > 0.55 && sensorEvidence < 0.38){
+      cls = "mixed";
+      decisionGuard = "evidence_mismatch";
+    }else if(confidence < 0.50){
+      cls = "mixed";
+      decisionGuard = "low_model_confidence";
+    }
+  }
+
+  const stability = Math.round(clamp01(
+    (1-vector[0])*0.18 +
+    vector[3]*0.10 +
+    (1-vector[4])*0.16 +
+    (1-vector[5])*0.13 +
+    (1-vector[6])*0.13 +
+    (1-vector[7])*0.13 +
+    vector[8]*0.17
+  ) * 100);
+
+  byId("stabilityScore").textContent = String(stability);
+  byId("scoreRing").style.setProperty("--v", stability);
+  byId("primaryResult").textContent = LABELS[cls];
+
+  if(decisionGuard === "insufficient_points"){
+    byId("resultSummary").textContent = "탄착점 수가 부족하여 결과를 보수적으로 표시합니다.";
+    byId("confidenceText").textContent = "판단 보류";
+  }else if(decisionGuard === "evidence_mismatch"){
+    byId("resultSummary").textContent = "탄착 분산과 센서 특징이 서로 맞지 않아 단일 원인으로 판단하지 않습니다.";
+    byId("confidenceText").textContent = "추가 데이터 필요";
+  }else if(decisionGuard === "low_model_confidence"){
+    byId("resultSummary").textContent = "모델의 최고 확률이 충분히 높지 않아 단일 원인으로 확정하지 않습니다.";
+    byId("confidenceText").textContent = "낮은 확신";
+  }else{
+    byId("resultSummary").textContent = SUMMARIES[cls];
+    byId("confidenceText").textContent = (confidence*100).toFixed(1) + "%";
+  }
+
+  byId("probabilityRows").innerHTML = probabilities
+    .map((value,index)=>({value,index}))
+    .sort((a,b)=>b.value-a.value)
+    .map(item=>{
+      const pct = Math.round(item.value*100);
+      return '<div class="prow"><span>'+LABELS[MODEL.classes[item.index]]+'</span><div class="bar"><div class="fill" style="width:'+pct+'%"></div></div><strong>'+pct+'%</strong></div>';
+    }).join("");
+
+  const metrics = impactMetrics();
+  renderImpactStats(metrics, "융합 분석", "good");
+  if(decisionGuard === "evidence_mismatch"){
+    byId("whyText").textContent = "탄착군은 넓게 분산되어 있지만 선택된 S-Module 패킷에서는 사수 동작·반동·진동 이상이 뚜렷하지 않습니다. 현재 정보만으로 원인을 설명하기 어렵기 때문에 S-Engine은 추가 측정이 필요한 상태로 판단합니다.";
+  }else if(decisionGuard === "low_model_confidence"){
+    byId("whyText").textContent = "여러 상태의 확률이 비슷해 하나의 원인이 우세하다고 보기 어렵습니다. S-Engine은 이 경우 단정하지 않고 반복 측정 또는 추가 데이터를 요구합니다.";
+  }else if(decisionGuard === "insufficient_points"){
+    byId("whyText").textContent = "탄착군의 분산과 중심을 비교하기 위한 표본이 부족합니다. 최소 2개 이상의 탄착점이 필요하며 실제 검증에서는 더 많은 반복 데이터가 사용됩니다.";
+  }else{
+    byId("whyText").textContent = explanationFor(cls, vector);
+  }
+
+  renderFeatureRows(vector);
+
+  const logConfidence = decisionGuard ? "guard:" + decisionGuard : (confidence*100).toFixed(1) + "%";
+  log("S-Engine 융합 AI 분석 완료 → " + LABELS[cls] + " / " + logConfidence, "ok");
+}
+
+async function runAnalysis(mode){
+  if(busy) return;
+  busy = true;
+  byId("impactOnlyBtn").disabled = true;
+  byId("fullAnalyzeBtn").disabled = true;
+  byId("processing").classList.add("show");
+
+  const steps = mode === "impact"
+    ? [
+        ["S-Vision 특징 추출","탄착군 분산·중심 편차·방향성 계산"],
+        ["탄착 패턴 해석","원인 분리 가능 여부 확인"]
+      ]
+    : [
+        ["S-Vision 특징 추출","탄착 패턴 특징 계산"],
+        ["S-Module 패킷 로드","동작·반동·진동 특징 결합"],
+        ["S-Engine AI 추론","다중분류 모델로 원인 가능성 비교"]
+      ];
+
+  for(const step of steps){
+    byId("procTitle").textContent = step[0];
+    byId("procSub").textContent = step[1];
+    log(step[0] + "...");
+    await sleep(320);
+  }
+
+  byId("processing").classList.remove("show");
+  if(mode === "impact") impactOnlyAnalysis();
+  else fullAnalysis();
+
+  byId("impactOnlyBtn").disabled = false;
+  byId("fullAnalyzeBtn").disabled = false;
+  busy = false;
+}
+
+bindActivate(byId("impactOnlyBtn"), ()=>runAnalysis("impact"));
+bindActivate(byId("fullAnalyzeBtn"), ()=>runAnalysis("full"));
+
+byId("modelAcc").textContent = (MODEL.synthetic_accuracy*100).toFixed(1) + "%";
+byId("trainCount").textContent = MODEL.train_n.toLocaleString();
+
+renderImpacts();
+clearResult();
+log("S-ZERO AI Demonstrator V5 초기화 완료", "ok");
+log("표적 입력 / 센서 패킷 / 분석 버튼 준비 완료", "ok");
+</script>
+
+<div id="runtimeNotice" style="display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#301b12;border:1px solid #a96535;color:#ffd8bd;padding:10px 12px;font-size:12px;border-radius:6px">
+이 파일이 '미리보기'로 열린 경우 버튼이 작동하지 않을 수 있습니다. 노트북 Chrome/Edge에서 파일을 직접 열거나 동봉된 RUN_LOCAL_SERVER를 실행하세요.
+</div>
+
+
+<script>
+window.addEventListener("load", function(){
+  try{
+    const required = [
+      "targetSvg","impactOnlyBtn","fullAnalyzeBtn","presetCenterBtn",
+      "presetBiasBtn","presetScatterBtn","undoBtn","clearBtn"
+    ];
+    const missing = required.filter(id => !document.getElementById(id));
+    if(missing.length){
+      const n = document.getElementById("runtimeNotice");
+      if(n){ n.style.display="block"; n.textContent="데모 구성요소 오류: " + missing.join(", "); }
+      return;
+    }
+    document.documentElement.setAttribute("data-szero-ready","1");
+  }catch(e){
+    const n = document.getElementById("runtimeNotice");
+    if(n){ n.style.display="block"; n.textContent="데모 초기화 오류: " + e.message; }
+  }
+});
+</script>
+
+
+<div style="width:min(1540px,calc(100% - 24px));margin:-10px auto 22px;text-align:right;
+font:7px ui-monospace,monospace;letter-spacing:.08em;color:#345666">
+S-ZERO PROTOTYPE · AI CORE TEST INTERFACE
+</div>
+
+</body>
+</html>
